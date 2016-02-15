@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using RestSharp;
@@ -23,21 +24,13 @@ namespace PopHealthAPI
             var request = new RestRequest("api/admin/patients.json", Method.POST);
             request.AddFile("file", file);
 
-            try
+            var response = client.Execute(request);
+            if (response.StatusCode != HttpStatusCode.OK)
             {
-                var response = client.Execute(request);
-                if (response.ResponseStatus != ResponseStatus.Completed)
-                {
-                    var responseMessage = string.Format("The API call failed.\r\n  Status: {0}\r\n  Message: {1}",
-                        response.ResponseStatus, response.Content);
-                    throw new Exception(responseMessage);
-                }
+                var responseMessage = string.Format("The API call failed.\r\n  Status: {0} {1}\r\n  Message: {2}",
+                    response.StatusCode, response.StatusDescription, response.Content);
+                throw new Exception(responseMessage);
             }
-            catch (Exception exc)
-            {
-                throw new Exception("Exception when executing API request", exc);
-            }
-            
         }
 
         // Using this requires you to add the following to api/patients_controller.rb.  

@@ -26,7 +26,7 @@ namespace PopHealthUploader
 
         public void InitializeFilePath()
         {
-            LogFilePath = Path.Combine(LogPath, Identifier, Extension);
+            LogFilePath = Path.Combine(LogPath, Identifier + Extension);
         }
 
         public void Write(string text, bool timestamp = true)
@@ -37,13 +37,14 @@ namespace PopHealthUploader
                 builder.AppendFormat("{0} - ", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             }
             builder.AppendFormat("{0}\r\n", text);
-            File.AppendAllText(LogFilePath, text);
+            File.AppendAllText(LogFilePath, builder.ToString());
         }
 
         public void WriteException(Exception exception)
         {
             var builder = new StringBuilder();
-            builder.AppendFormat("Caught the following exception:\r\n{0}\r\n{1}", exception.Message, exception.StackTrace);
+            builder.AppendFormat("Caught the following exception:\r\n{0}\r\n{1}\r\n", exception.Message, exception.StackTrace);
+            Write(builder.ToString());
         }
     }
 }

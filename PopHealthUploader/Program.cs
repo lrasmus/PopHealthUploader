@@ -41,7 +41,7 @@ namespace PopHealthUploader
                     {
                         logger.Write("Beginning patient archive import");
                         patient.UploadArchive(importPath);
-                        logger.Write("Finished patient archive import");
+                        logger.Write("Successfully finished patient archive import");
                     }
                     else
                     {
