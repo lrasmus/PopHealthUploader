@@ -11,5 +11,6 @@ namespace PopHealthUploader
         public string PopHealthUser { get; set; }
         public string PopHealthPassword { get; set; }
         public string PopHealthBaseUrl { get; set; }
+        public string LogPath { get; set; }
     }
 }

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using PopHealthAPI;
@@ -12,7 +14,7 @@ namespace PopHealthUploader
     {
         static void Main(string[] args)
         {
-            if (args.Length == 0)
+            if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
             {
                 DisplayUsage();
                 return;
@@ -24,8 +26,41 @@ namespace PopHealthUploader
                 return;
             }
 
+            var logger = new Logger(DateTime.Now.ToString("yyyyMMddHHmmssfff"), configuration.LogPath);
+            logger.Write("Beginning import job");
+
+            string importPath = args[0];
+            logger.Write(string.Format("Importing: {0}", importPath));
             var patient = new Patient(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
-            //patient.UploadArchive(@"C:\Development\MSPCTRA\PopHealthUploader\h3-patients.zip");
+
+            try
+            {
+                if (Path.HasExtension(importPath))
+                {
+                    if (Path.GetExtension(importPath).Equals(".zip", StringComparison.CurrentCultureIgnoreCase))
+                    {
+                        logger.Write("Beginning patient archive import");
+                        patient.UploadArchive(importPath);
+                        logger.Write("Finished patient archive import");
+                    }
+                    else
+                    {
+                        logger.Write("Unknown file extension.  This job will exit with no records imported.");
+                        DisplayUsage();
+                    }
+                }
+                else
+                {
+                    logger.Write("No file extension could be found.  This job will exit with no records imported.");
+                    DisplayUsage();
+                }
+            }
+            catch (Exception exc)
+            {
+                logger.WriteException(exc);
+            }
+
+            logger.Write("Ending import job");
         }
 
         /// <summary>
@@ -53,6 +88,13 @@ namespace PopHealthUploader
             if (string.IsNullOrWhiteSpace(configuration.PopHealthBaseUrl))
             {
                 Console.WriteLine("popHealthBaseUrl must be specified in the App.config");
+                valid = false;
+            }
+
+            configuration.LogPath = ConfigurationManager.AppSettings["LogPath"];
+            if (string.IsNullOrWhiteSpace(configuration.LogPath))
+            {
+                Console.WriteLine("LogPath must be specified in the App.config");
                 valid = false;
             }
 
