@@ -14,7 +14,7 @@ namespace PopHealthUploader
     {
         static void Main(string[] args)
         {
-            if (args.Length == 0 || string.IsNullOrWhiteSpace(args[0]))
+            if (args.Length < 2 || string.IsNullOrWhiteSpace(args[0]) || string.IsNullOrWhiteSpace(args[1]))
             {
                 DisplayUsage();
                 return;
@@ -31,16 +31,41 @@ namespace PopHealthUploader
 
             string importPath = args[0];
             logger.Write(string.Format("Importing: {0}", importPath));
-            var patient = new Patient(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
+            string practiceId = args[1];
 
+            var patientApi = new PatientApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
+            var practiceApi = new PracticeApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
             try
             {
                 if (Path.HasExtension(importPath))
                 {
                     if (Path.GetExtension(importPath).Equals(".zip", StringComparison.CurrentCultureIgnoreCase))
                     {
+                        logger.Write(string.Format("Searching for practice with alternate Id {0}", practiceId));
+                        var practices = practiceApi.SearchForPracticesByAlternateId(practiceId);
+                        if (practices == null || practices.Count == 0)
+                        {
+                            var responseMessage = string.Format("No practices were found with alternate Id {0}.", practiceId);
+                            throw new Exception(responseMessage);
+                        }
+                        if (practices.Count > 1)
+                        {
+                            var responseMessage = string.Format("{0} practices were found with alternate Id {1}.",
+                                practices.Count, practiceId);
+                            throw new Exception(responseMessage);
+                        }
+                        var practice = practiceApi.Get(practices.First().Id);
+                        logger.Write("Completed searching for practice");
+
+                        if (practice.PatientCount.HasValue && practice.PatientCount.Value > 0)
+                        {
+                            var responseMessage = string.Format("Practice {0} ({1}) has {2} patients loaded.\r\nYou must remove existing patients from popHealth before proceeding.",
+                                practice.Name, practice.Id, practice.PatientCount.Value);
+                            throw new Exception(responseMessage);
+                        }
+
                         logger.Write("Beginning patient archive import");
-                        patient.UploadArchive(importPath);
+                        patientApi.UploadArchive(importPath, practice);
                         logger.Write("Successfully finished patient archive import");
                     }
                     else
@@ -57,7 +82,10 @@ namespace PopHealthUploader
             }
             catch (Exception exc)
             {
+                Console.WriteLine("The following error was raised:\r\n  {0}\r\n\r\nSee {1} for more details.",
+                    exc.Message, logger.LogPath);
                 logger.WriteException(exc);
+                Environment.Exit(-1);
             }
 
             logger.Write("Ending import job");

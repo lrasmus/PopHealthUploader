@@ -5,23 +5,27 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using PopHealthAPI.Model;
 using RestSharp;
 using RestSharp.Authenticators;
 
 namespace PopHealthAPI
 {
-    public class Patient : ApiBase
+    public class PatientApi : ApiBase
     {
-        public Patient(string username, string password, string baseUrl) : base(username, password, baseUrl)
+        public PatientApi(string username, string password, string baseUrl) : base(username, password, baseUrl)
         {
         }
 
-        public void UploadArchive(string file)
+        public void UploadArchive(string file, Practice practice)
         {
             var client = new RestClient(BaseUrl);
             client.Authenticator = new HttpBasicAuthenticator(Username, Password);
 
             var request = new RestRequest("api/admin/patients.json", Method.POST);
+            request.AddParameter("practice_id", practice.Id);
+            request.AddParameter("practice_name", practice.Name);
             request.AddFile("file", file);
 
             var response = client.Execute(request);

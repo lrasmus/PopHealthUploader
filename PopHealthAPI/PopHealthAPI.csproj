@@ -50,8 +50,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ApiBase.cs" />
-    <Compile Include="Patient.cs" />
+    <Compile Include="Model\Practice.cs" />
+    <Compile Include="PatientApi.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PracticeApi.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
