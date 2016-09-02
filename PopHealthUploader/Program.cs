@@ -52,13 +52,13 @@ namespace PopHealthUploader
                     Environment.Exit(-1);
                 }
 
-                var archivePath = archiver.GetArchivePath(practice.Key);
-                var uploader = new Uploader(configuration, logger);
-                if (!uploader.Execute(archivePath, practice.Key, queryTemplates))
-                {
-                    logger.Write("There was an error performing the upload");
-                    Environment.Exit(-1);
-                }
+                //var archivePath = archiver.GetArchivePath(practice.Key);
+                //var uploader = new Uploader(configuration, logger);
+                //if (!uploader.Execute(archivePath, practice.Key, queryTemplates))
+                //{
+                //    logger.Write("There was an error performing the upload");
+                //    Environment.Exit(-1);
+                //}
             }
 
             logger.Write("Ending import job");

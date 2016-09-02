@@ -26,7 +26,7 @@ namespace PopHealthUploader
             string archiveName = string.Format("{0}-{1}.zip", practiceId, DateSuffix);
             string archivePath = Path.Combine(Config.PracticeArchiveTempFolder, archiveName);
 
-            var files = Directory.GetFiles(directory, "*.xml");
+            var files = Directory.GetFiles(directory, "*.json");
             if (files.Length == 0)
             {
                 Log.Write(string.Format("No files were in the folder: {0}", directory));
