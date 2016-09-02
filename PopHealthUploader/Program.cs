@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PopHealthAPI;
@@ -16,12 +18,6 @@ namespace PopHealthUploader
     {
         static void Main(string[] args)
         {
-            if (args.Length < 2 || string.IsNullOrWhiteSpace(args[0]) || string.IsNullOrWhiteSpace(args[1]))
-            {
-                DisplayUsage();
-                return;
-            }
-
             var configuration = new Configuration();
             if (!VerifyConfiguration(configuration))
             {
@@ -31,10 +27,6 @@ namespace PopHealthUploader
             var logger = new Logger(DateTime.Now.ToString("yyyyMMddHHmmssfff"), configuration.LogPath);
             logger.Write("Beginning import job");
 
-            string importPath = args[0];
-            logger.Write(string.Format("Importing: {0}", importPath));
-            string practiceId = args[1];
-
             var queryTemplates = JsonConvert.DeserializeObject<List<Query>>(File.ReadAllText(configuration.JobConfigurationPath));
             if (queryTemplates == null || queryTemplates.Count == 0)
             {
@@ -42,83 +34,51 @@ namespace PopHealthUploader
                 Environment.Exit(-1);
             }
 
-            var patientApi = new PatientApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
-            var practiceApi = new PracticeApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
-            var queryApi = new QueryApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
-            try
+            // Get a list of all of the practice folders that we have data for.  This will drive the rest of the program.
+            // If there are no practices, we end assuming there is just no data for us to process.
+            var practices = GetPractices(configuration);
+            if (practices.Count == 0)
             {
-                if (Path.HasExtension(importPath))
-                {
-                    if (Path.GetExtension(importPath).Equals(".zip", StringComparison.CurrentCultureIgnoreCase))
-                    {
-                        logger.Write(string.Format("Searching for practice with alternate Id {0}", practiceId));
-                        var practices = practiceApi.SearchForPracticesByAlternateId(practiceId);
-                        if (practices == null || practices.Count == 0)
-                        {
-                            var responseMessage = string.Format("No practices were found with alternate Id {0}.", practiceId);
-                            throw new Exception(responseMessage);
-                        }
-                        if (practices.Count > 1)
-                        {
-                            var responseMessage = string.Format("{0} practices were found with alternate Id {1}.",
-                                practices.Count, practiceId);
-                            throw new Exception(responseMessage);
-                        }
-                        var practice = practiceApi.Get(practices.First().Id);
-                        logger.Write("Completed searching for practice");
-
-                        if (practice.PatientCount.HasValue && practice.PatientCount.Value > 0)
-                        {
-                            var responseMessage = string.Format("Practice {0} ({1}) has {2} patients loaded.\r\nYou must remove existing patients from popHealth before proceeding.",
-                                practice.Name, practice.Id, practice.PatientCount.Value);
-                            throw new Exception(responseMessage);
-                        }
-
-                        logger.Write("Beginning patient archive import");
-                        patientApi.UploadArchive(importPath, practice);
-                        logger.Write("Successfully finished patient archive import");
-
-                        System.Threading.Thread.Sleep(10000);
-
-                        logger.Write("Beginning query cache setup");
-                        foreach (var template in queryTemplates)
-                        {
-                            if (practice.Providers != null)
-                            {
-                                Query query = null;
-                                foreach (var provider in practice.Providers)
-                                {
-                                    query = new Query(template) { Providers = new[] { provider } };
-                                    queryApi.Add(query);
-                                }
-
-                                query = new Query(template) { Providers = new[] { practice.ProviderId } };
-                                queryApi.Add(query);
-                            }
-                        }
-                        logger.Write("Successfully finished loading query cache jobs");
-                    }
-                    else
-                    {
-                        logger.Write("Unknown file extension.  This job will exit with no records imported.");
-                        DisplayUsage();
-                    }
-                }
-                else
-                {
-                    logger.Write("No file extension could be found.  This job will exit with no records imported.");
-                    DisplayUsage();
-                }
-            }
-            catch (Exception exc)
-            {
-                Console.WriteLine("The following error was raised:\r\n  {0}\r\n\r\nSee {1} for more details.",
-                    exc.Message, logger.LogPath);
-                logger.WriteException(exc);
+                LogAndDisplay("There were no directories to process", logger);
                 Environment.Exit(-1);
             }
 
+            var archiver = new Archiver(configuration, logger);
+            foreach (var practice in practices)
+            {
+                if (!archiver.Execute(practice.Key, practice.Value))
+                {
+                    LogAndDisplay(string.Format("Failed to create the archive for practice {0} from {1}", practice.Key, practice.Value), logger);
+                    Environment.Exit(-1);
+                }
+
+                var archivePath = archiver.GetArchivePath(practice.Key);
+                var uploader = new Uploader(configuration, logger);
+                if (!uploader.Execute(archivePath, practice.Key, queryTemplates))
+                {
+                    logger.Write("There was an error performing the upload");
+                    Environment.Exit(-1);
+                }
+            }
+
             logger.Write("Ending import job");
+        }
+
+        public static Dictionary<string, string> GetPractices(Configuration configuration)
+        {
+            var practices = new Dictionary<string, string>();
+            var directories = Directory.GetDirectories(configuration.PracticeDataInputDirectory);
+            var regex = new Regex(configuration.PracticeFolderPattern);
+            foreach (var directory in directories)
+            {
+                var match = regex.Match(directory);
+                if (match.Success)
+                {
+                    practices.Add(match.Groups[1].Value, directory);
+                }
+            }
+
+            return practices;
         }
 
         /// <summary>
@@ -163,6 +123,34 @@ namespace PopHealthUploader
                 valid = false;
             }
 
+            configuration.PracticeDataInputDirectory = ConfigurationManager.AppSettings["PracticeDataInputDirectory"];
+            if (string.IsNullOrWhiteSpace(configuration.PracticeDataInputDirectory))
+            {
+                Console.WriteLine("PracticeDataInputDirectory must be specified in the App.config");
+                valid = false;
+            }
+
+            configuration.PracticeFolderPattern = ConfigurationManager.AppSettings["PracticeFolderPattern"];
+            if (string.IsNullOrWhiteSpace(configuration.PracticeFolderPattern))
+            {
+                Console.WriteLine("PracticeFolderPattern must be specified in the App.config");
+                valid = false;
+            }
+
+            configuration.PracticeArchiveTempFolder = ConfigurationManager.AppSettings["PracticeArchiveTempFolder"];
+            if (string.IsNullOrWhiteSpace(configuration.PracticeArchiveTempFolder))
+            {
+                Console.WriteLine("PracticeArchiveTempFolder must be specified in the App.config");
+                valid = false;
+            }
+
+            configuration.PracticeArchiveFolder = ConfigurationManager.AppSettings["PracticeArchiveFolder"];
+            if (string.IsNullOrWhiteSpace(configuration.PracticeArchiveFolder))
+            {
+                Console.WriteLine("PracticeArchiveFolder must be specified in the App.config");
+                valid = false;
+            }
+
             if (!valid)
             {
                 Console.WriteLine();
@@ -175,23 +163,6 @@ namespace PopHealthUploader
         {
             logger.Write(message);
             Console.WriteLine(message);
-        }
-
-        /// <summary>
-        /// Display the usage information for this application, including expected parameters and a
-        /// description of those parameters.
-        /// </summary>
-        public static void DisplayUsage()
-        {
-            Console.WriteLine("popHealth Patient Uploader");
-            Console.WriteLine("");
-            Console.WriteLine("Usage:");
-            Console.WriteLine("  PopHealthUploader zip_file study_id");
-            Console.WriteLine("");
-            Console.WriteLine("Options:");
-            Console.WriteLine("  zip_file  - An existing zipped archive file");
-            Console.WriteLine("  study_id  - The study identifier for the practice");
-            Console.WriteLine("");
         }
     }
 }
