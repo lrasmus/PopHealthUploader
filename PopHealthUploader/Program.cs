@@ -6,7 +6,9 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using PopHealthAPI;
+using PopHealthAPI.Model;
 
 namespace PopHealthUploader
 {
@@ -33,8 +35,16 @@ namespace PopHealthUploader
             logger.Write(string.Format("Importing: {0}", importPath));
             string practiceId = args[1];
 
+            var queryTemplates = JsonConvert.DeserializeObject<List<Query>>(File.ReadAllText(configuration.JobConfigurationPath));
+            if (queryTemplates == null || queryTemplates.Count == 0)
+            {
+                LogAndDisplay("The job configuration data returned no templates", logger);
+                Environment.Exit(-1);
+            }
+
             var patientApi = new PatientApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
             var practiceApi = new PracticeApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
+            var queryApi = new QueryApi(configuration.PopHealthUser, configuration.PopHealthPassword, configuration.PopHealthBaseUrl);
             try
             {
                 if (Path.HasExtension(importPath))
@@ -67,6 +77,26 @@ namespace PopHealthUploader
                         logger.Write("Beginning patient archive import");
                         patientApi.UploadArchive(importPath, practice);
                         logger.Write("Successfully finished patient archive import");
+
+                        System.Threading.Thread.Sleep(10000);
+
+                        logger.Write("Beginning query cache setup");
+                        foreach (var template in queryTemplates)
+                        {
+                            if (practice.Providers != null)
+                            {
+                                Query query = null;
+                                foreach (var provider in practice.Providers)
+                                {
+                                    query = new Query(template) { Providers = new[] { provider } };
+                                    queryApi.Add(query);
+                                }
+
+                                query = new Query(template) { Providers = new[] { practice.ProviderId } };
+                                queryApi.Add(query);
+                            }
+                        }
+                        logger.Write("Successfully finished loading query cache jobs");
                     }
                     else
                     {
@@ -126,12 +156,25 @@ namespace PopHealthUploader
                 valid = false;
             }
 
+            configuration.JobConfigurationPath = ConfigurationManager.AppSettings["JobConfigurationPath"];
+            if (string.IsNullOrWhiteSpace(configuration.JobConfigurationPath))
+            {
+                Console.WriteLine("JobConfigurationPath must be specified in the App.config");
+                valid = false;
+            }
+
             if (!valid)
             {
                 Console.WriteLine();
             }
 
             return valid;
+        }
+
+        private static void LogAndDisplay(string message, Logger logger)
+        {
+            logger.Write(message);
+            Console.WriteLine(message);
         }
 
         /// <summary>
@@ -143,11 +186,11 @@ namespace PopHealthUploader
             Console.WriteLine("popHealth Patient Uploader");
             Console.WriteLine("");
             Console.WriteLine("Usage:");
-            Console.WriteLine("  PopHealthUploader directory | zip_file");
+            Console.WriteLine("  PopHealthUploader zip_file study_id");
             Console.WriteLine("");
             Console.WriteLine("Options:");
-            Console.WriteLine("  directory - The directory to process, containing XML and/or JSON files");
             Console.WriteLine("  zip_file  - An existing zipped archive file");
+            Console.WriteLine("  study_id  - The study identifier for the practice");
             Console.WriteLine("");
         }
     }

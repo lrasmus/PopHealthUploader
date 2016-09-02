@@ -25,5 +25,7 @@ namespace PopHealthAPI.Model
         public string ProviderId { get; set; }
         [JsonProperty("patient_count")]
         public int? PatientCount { get; set; }
+        [JsonProperty("providers")]
+        public string[] Providers { get; set; }
     }
 }
