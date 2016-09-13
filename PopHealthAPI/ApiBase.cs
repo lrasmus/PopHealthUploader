@@ -21,6 +21,8 @@ namespace PopHealthAPI
             Username = username;
             Password = password;
             BaseUrl = baseUrl;
+
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
         }
     }
 }
