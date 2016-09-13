@@ -1,0 +1,35 @@
+[
+	{
+		"measure_id" : "40280381-4555-E1C1-0145-F65B04DF5504",
+		"sub_id" : "a",
+		"effective_date": 1451520000,
+		"effective_start_date": 1419984000
+	},
+	{
+		"measure_id" : "40280381-4555-E1C1-0145-F65B04DF5504",
+		"sub_id" : "b",
+		"effective_date": 1451520000,
+		"effective_start_date": 1419984000
+	},
+	{
+		"measure_id" : "40280381-4555-E1C1-0145-F65B04DF5504",
+		"sub_id" : "c",
+		"effective_date": 1451520000,
+		"effective_start_date": 1419984000
+	},
+	{
+		"measure_id" : "40280381-4B9A-3825-014B-C2899FCF08B9",
+		"effective_date": 1451520000,
+		"effective_start_date": 1419984000
+	},
+	{
+		"measure_id" : "40280381-4B9A-3825-014B-C290ABF408CA",
+		"effective_date": 1451520000,
+		"effective_start_date": 1419984000
+	},
+	{
+		"measure_id" : "40280381-4C18-79DF-014C-2DFA25F60C0E",
+		"effective_date": 1451520000,
+		"effective_start_date": 1419984000
+	}
+]
