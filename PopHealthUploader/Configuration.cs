@@ -15,6 +15,7 @@ namespace PopHealthUploader
         public string JobConfigurationPath { get; set; }
         public string PracticeDataInputDirectory { get; set; }
         public string PracticeFolderPattern { get; set; }
+        public string UploadFilePattern { get; set; }
         public string PracticeArchiveTempFolder { get; set; }
         public string PracticeArchiveFolder { get; set; }
     }
