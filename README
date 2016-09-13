@@ -1,3 +1,21 @@
+To use:
+1. Modify the App.config file with your local setup
+  a. popHealthUser - the username in popHealth that has admin rights to upload files
+  b. popHealthPassword - the password for the popHealth admin account
+  c. popHealthBaseUrl - the base URL for your popHealth installation
+  d. LogPath - the directory where you want logs created.  Each execution of the program will create its own log in this directory
+  e. JobConfigurationPath - not used at this time
+  f. PracticeDataInputDirectory - the root folder where your practice-specific data folders will exist
+  g. PracticeFolderPattern - a regular expression for how you name your practice folders.  One capture group is needed to extract the practice ID (e.g. the default will get practice ID 1234 for a folder named Output_1234)
+  h. UploadFilePattern - the file pattern in each practice folder for the files that you want to upload.  For popHealth, this could be .xml or .json
+  i. PracticeArchiveTempFolder - a temporary folder location where archives are created from the practice data
+  j. PracticeArchiveFolder - a root folder where archives will be uploaded by practice.
+2. Ensure popHealth is up and running, and contains an admin user that you have entered into the App.config.
+3. Right now this assumes you have no patients loaded for a specific practice, and if you do it will be manually deleted from the popHealth UI.
+
+The program is also set up to require TLS 1.2 for security reasons (See PopHealthAPI\ApiBase.cs:25).  Remove this if you allow any SSL connection.
+
+
 Development of this software was supported by grant number 5R18HS023921-02 from the Agency for Healthcare Research and Quality (AHRQ).
 
 The contents of this code are solely the responsibility of Northwestern University and do not necessarily represent the official views of or imply endorsement by AHRQ or the U.S. Department of Health and Human Services.
