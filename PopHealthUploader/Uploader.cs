@@ -50,9 +50,9 @@ namespace PopHealthUploader
 
                         if (practice.PatientCount.HasValue && practice.PatientCount.Value > 0)
                         {
-                            var responseMessage = string.Format("Practice {0} ({1}) has {2} patients loaded.\r\nYou must remove existing patients from popHealth before proceeding.",
-                                practice.Name, practice.Id, practice.PatientCount.Value);
-                            throw new Exception(responseMessage);
+                            Log.Write(string.Format("Removing {0} patients", practices.First().Id));
+                            practiceApi.RemovePatients(practices.First().Id);
+                            Log.Write("Completed removing patients");
                         }
 
                         Log.Write("Beginning patient archive import");

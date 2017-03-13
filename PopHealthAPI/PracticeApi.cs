@@ -58,5 +58,20 @@ namespace PopHealthAPI
 
             return practice;
         }
+
+        public void RemovePatients(string practiceId)
+        {
+            var client = new RestClient(BaseUrl);
+            client.Authenticator = new HttpBasicAuthenticator(Username, Password);
+
+            var request = new RestRequest(string.Format("api/admin/practices/{0}/remove_patients", practiceId), Method.DELETE);
+            var response = client.Execute(request);
+            if (response.StatusCode != HttpStatusCode.NoContent)
+            {
+                var responseMessage = string.Format("The remove patients call failed for {0}.\r\n  Status: {1} {2}\r\n  Message: {3}",
+                    practiceId, response.StatusCode, response.StatusDescription, response.Content);
+                throw new Exception(responseMessage);
+            }
+        }
     }
 }
