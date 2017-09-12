@@ -46,18 +46,21 @@ namespace PopHealthUploader
             var archiver = new Archiver(configuration, logger);
             foreach (var practice in practices)
             {
-                if (!archiver.Execute(practice.Key, practice.Value))
+                var archivePathList = archiver.Execute(practice.Key, practice.Value);
+                if (archivePathList == null)
                 {
                     LogAndDisplay(string.Format("Failed to create the archive for practice {0} from {1}", practice.Key, practice.Value), logger);
                     Environment.Exit(-1);
                 }
 
-                var archivePath = archiver.GetArchivePath(practice.Key);
-                var uploader = new Uploader(configuration, logger);
-                if (!uploader.Execute(archivePath, practice.Key, queryTemplates))
+                foreach (var archivePath in archivePathList)
                 {
-                    logger.Write("There was an error performing the upload");
-                    Environment.Exit(-1);
+                    var uploader = new Uploader(configuration, logger);
+                    if (!uploader.Execute(archivePath, practice.Key, queryTemplates))
+                    {
+                        logger.Write("There was an error performing the upload");
+                        Environment.Exit(-1);
+                    }
                 }
             }
 
@@ -155,6 +158,20 @@ namespace PopHealthUploader
             if (string.IsNullOrWhiteSpace(configuration.PracticeArchiveFolder))
             {
                 Console.WriteLine("PracticeArchiveFolder must be specified in the App.config");
+                valid = false;
+            }
+
+            var maxFilesPerArchiveString = ConfigurationManager.AppSettings["MaxFilesPerArchive"];
+            int maxFilesPerArchive = 0;
+            if (!int.TryParse(maxFilesPerArchiveString, out maxFilesPerArchive))
+            {
+                Console.WriteLine("MaxFilesPerArchive must be a positive integer specified in the App.config");
+                valid = false;
+            }
+            configuration.MaxFilesPerArchive = maxFilesPerArchive;
+            if (configuration.MaxFilesPerArchive < 1)
+            {
+                Console.WriteLine("MaxFilesPerArchive must be a positive integer specified in the App.config");
                 valid = false;
             }
 

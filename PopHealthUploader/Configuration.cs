@@ -18,5 +18,6 @@ namespace PopHealthUploader
         public string UploadFilePattern { get; set; }
         public string PracticeArchiveTempFolder { get; set; }
         public string PracticeArchiveFolder { get; set; }
+        public int MaxFilesPerArchive { get; set; }
     }
 }

@@ -50,7 +50,7 @@ namespace PopHealthUploader
 
                         if (practice.PatientCount.HasValue && practice.PatientCount.Value > 0)
                         {
-                            Log.Write(string.Format("Removing {0} patients", practices.First().Id));
+                            Log.Write(string.Format("Removing {0} patients", practices.First().PatientCount));
                             practiceApi.RemovePatients(practices.First().Id);
                             Log.Write("Completed removing patients");
                         }
